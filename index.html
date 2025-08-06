@@ -152,15 +152,15 @@
         const firebaseConfig = typeof __firebase_config !== 'undefined'
             ? JSON.parse(__firebase_config)
             : {
-                // Dit zijn dummy-waarden. Vervang deze door je ECHTE Firebase-configuratie
-                // als je data persistent wilt opslaan in je eigen Firebase-project.
-                // Je vindt deze in de Firebase Console onder Projectinstellingen -> Algemeen.
-                apiKey: "YOUR_API_KEY",
-                authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-                projectId: "YOUR_PROJECT_ID",
-                storageBucket: "YOUR_PROJECT_ID.appspot.com",
-                messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-                appId: "YOUR_APP_ID"
+                // JE FIREBASE CONFIGURATIE (VAN DE FIREBASE CONSOLE)
+                apiKey: "AIzaSyD0_SOJt-CoYuEtHACzrSjDrI3opZdaWvM",
+                authDomain: "motivation-booster-be598.firebaseapp.com",
+                projectId: "motivation-booster-be598",
+                storageBucket: "motivation-booster-be598.firebasestorage.app",
+                messagingSenderId: "790125844576",
+                appId: "1:790125844576:web:7a69934299da7eb5230b05",
+                // measurementId is optioneel voor de basisfunctionaliteit
+                // measurementId: "G-5855686MXG"
               };
 
         let app, db, auth;
@@ -245,6 +245,8 @@
                 }
 
                 // Aanmelden met custom token indien beschikbaar, anders anoniem
+                // __initial_auth_token is alleen beschikbaar in de Canvas omgeving.
+                // Op GitHub Pages zullen we anoniem aanmelden.
                 if (typeof __initial_auth_token !== 'undefined') {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
@@ -256,7 +258,7 @@
                         currentUserId = user.uid;
                     } else {
                         // Terugval voor niet-geauthenticeerde gebruikers (bijv. als token mislukt)
-                        currentUserId = crypto.randomUUID();
+                        currentUserId = crypto.randomUUID(); // Genereer een willekeurige ID voor anonieme gebruikers
                     }
                     isAuthReady = true;
                     console.log("Firebase Auth Ready. User ID:", currentUserId);
@@ -431,8 +433,10 @@
 
                 const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
                 const payload = { contents: chatHistory };
-                const apiKey = ""; // Canvas zal dit tijdens runtime leveren
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                // BELANGRIJK: Voor GitHub Pages moet je hier je EIGEN Gemini API sleutel invullen.
+                // Anders werkt de virtuele manager niet.
+                const geminiApiKey = "YOUR_GEMINI_API_KEY"; // <-- VERVANG DEZE
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -481,8 +485,10 @@
                     },
                     model: "gemini-2.5-flash-preview-tts"
                 };
-                const apiKey = ""; // Canvas zal dit tijdens runtime leveren
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                // BELANGRIJK: Voor GitHub Pages moet je hier je EIGEN Gemini API sleutel invullen.
+                // Anders werkt de gesproken reactie niet.
+                const geminiApiKey = "YOUR_GEMINI_API_KEY"; // <-- VERVANG DEZE
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${geminiApiKey}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',

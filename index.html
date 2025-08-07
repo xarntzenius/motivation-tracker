@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>✨ Mijn Motivatie Booster</title>
+  <title>✨ Mijn AI Motivatie Booster</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -32,6 +32,22 @@
       padding: 16px;
       border-radius: 8px;
       margin-top: 16px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .api-key-setup {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 4px solid #3b82f6;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .typing {
+      animation: typing 1.5s infinite;
+    }
+    @keyframes typing {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.3; }
     }
   </style>
 </head>
@@ -41,7 +57,24 @@
 
     <!-- Linker Paneel -->
     <div class="glass p-6 lg:p-8 fade-in">
-      <h1 class="text-3xl font-bold mb-6 text-indigo-700">📊 Mijn Motivatie Booster</h1>
+      <h1 class="text-3xl font-bold mb-6 text-indigo-700">🤖 AI Motivatie Booster</h1>
+
+      <!-- API Key Setup -->
+      <div id="apiKeySetup" class="api-key-setup">
+        <h3 class="font-semibold mb-2">🔑 AI Setup (eenmalig)</h3>
+        <p class="text-sm mb-2">Om de AI te gebruiken heb je een gratis Google Gemini API key nodig:</p>
+        <ol class="text-xs mb-3 ml-4 list-decimal">
+          <li>Ga naar <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-blue-600 underline">makersuite.google.com/app/apikey</a></li>
+          <li>Log in met Google account</li>
+          <li>Klik "Create API Key"</li>
+          <li>Plak de key hieronder:</li>
+        </ol>
+        <div class="flex gap-2">
+          <input id="apiKeyInput" type="password" class="flex-1 p-2 rounded border text-sm" placeholder="AIza......" />
+          <button id="saveApiKey" class="px-4 py-2 bg-blue-600 text-white rounded text-sm">Opslaan</button>
+        </div>
+        <p class="text-xs text-gray-600 mt-1">Je API key wordt lokaal opgeslagen in je browser</p>
+      </div>
 
       <h2 class="text-xl font-semibold mb-2">🌟 Ambitie Toevoegen</h2>
       <input id="newAmbitionText" class="w-full p-3 rounded-lg border mb-2" placeholder="Wat wil je bereiken? 🚀" />
@@ -57,11 +90,11 @@
       </button>
       <p id="ambitionError" class="text-red-500 text-sm hidden">Vul zowel ambitie als categorie in.</p>
 
-      <h2 class="text-xl font-semibold mt-6 mb-2">🧠 Virtuele Manager</h2>
-      <textarea id="chatInput" class="w-full p-3 rounded-lg border mb-2" placeholder="Waar loop je tegenaan? 🤔" rows="3"></textarea>
-      <button id="chatButton" class="w-full py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 transition">🤖 Vraag je Virtuele Manager</button>
+      <h2 class="text-xl font-semibold mt-6 mb-2">🧠 AI Motivatie Coach</h2>
+      <textarea id="chatInput" class="w-full p-3 rounded-lg border mb-2" placeholder="Beschrijf je situatie... De AI kent je ambities en geeft persoonlijk advies! 🤔" rows="3"></textarea>
+      <button id="chatButton" class="w-full py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 transition">🤖 Vraag je AI Coach</button>
       <div id="chatResponseContainer" class="mt-4 hidden">
-        <h3 class="text-lg font-semibold mb-1">🗣️ Antwoord:</h3>
+        <h3 class="text-lg font-semibold mb-1">🗣️ AI Antwoord:</h3>
         <div id="chatResponseText" class="manager-response"></div>
       </div>
     </div>
@@ -85,92 +118,126 @@
   </div>
 
   <script>
-    const newAmbitionText = document.getElementById('newAmbitionText');
-    const selectedCategory = document.getElementById('selectedCategory');
-    const addAmbitionButton = document.getElementById('addAmbitionButton');
-    const ambitionError = document.getElementById('ambitionError');
-    const ambitionsList = document.getElementById('ambitionsList');
-    const chatInput = document.getElementById('chatInput');
-    const chatButton = document.getElementById('chatButton');
-    const chatResponseContainer = document.getElementById('chatResponseContainer');
-    const chatResponseText = document.getElementById('chatResponseText');
-    const progressText = document.getElementById('progressText');
-    const progressBar = document.getElementById('progressBar');
-
-    // Load saved ambitions from localStorage
-    let ambitions = JSON.parse(localStorage.getItem('motivationAmbitions') || '[]');
-
-    // Virtuele manager responses
-    const managerResponses = {
-      'structuur': [
-        'Probeer je dag op te delen in blokken van 2 uur. Begin met het belangrijkste werk als je energie het hoogst is.',
-        'Maak elke ochtend een lijst van 3 concrete dingen die je die dag wilt afkrijgen. Meer niet!',
-        'Zet een timer voor 25 minuten en werk gefocust aan één taak (Pomodoro techniek).'
-      ],
-      'motivatie': [
-        'Bedenk waarom dit werk belangrijk is voor je lange termijn doelen. Schrijf dat op.',
-        'Beloon jezelf na het voltooien van taken, ook de kleine. Een kop goede koffie kan al genoeg zijn.',
-        'Vertel een collega wat je van plan bent te doen vandaag. Sociale verantwoording helpt enorm.'
-      ],
-      'feedback': [
-        'Vraag je manager om een wekelijks 15-minuten gesprekje. Gewoon: "Hoe doe ik het?"',
-        'Stuur elke vrijdag een kort mailtje met wat je hebt bereikt die week.',
-        'Zoek een collega die ook wil groeien en word elkaars accountability partner.'
-      ],
-      'samenwerking': [
-        'Neem initiatief voor een informeel kennisdelings-moment met je team.',
-        'Bied hulp aan bij projecten waar je iets van kunt leren.',
-        'Stel voor om samen te lunchen met collega\'s - relaties zijn belangrijk.'
-      ],
-      'ontwikkeling': [
-        'Gebruik rustige momenten voor online cursussen of certificaten.',
-        'Vraag of je mee kunt kijken bij interessante projecten van anderen.',
-        'Start een klein eigen project dat waarde toevoegt aan het team.'
-      ],
-      'werkdruk': [
-        'Lage werkdruk is ook een kans - wat kun je leren of verbeteren in deze tijd?',
-        'Maak eigen deadlines en houd je eraan. Behandel ze als echte deadlines.',
-        'Zoek naar processen die verbeterd kunnen worden en stel verbeteringen voor.'
-      ]
+    const elements = {
+      apiKeySetup: document.getElementById('apiKeySetup'),
+      apiKeyInput: document.getElementById('apiKeyInput'),
+      saveApiKey: document.getElementById('saveApiKey'),
+      newAmbitionText: document.getElementById('newAmbitionText'),
+      selectedCategory: document.getElementById('selectedCategory'),
+      addAmbitionButton: document.getElementById('addAmbitionButton'),
+      ambitionError: document.getElementById('ambitionError'),
+      ambitionsList: document.getElementById('ambitionsList'),
+      chatInput: document.getElementById('chatInput'),
+      chatButton: document.getElementById('chatButton'),
+      chatResponseContainer: document.getElementById('chatResponseContainer'),
+      chatResponseText: document.getElementById('chatResponseText'),
+      progressText: document.getElementById('progressText'),
+      progressBar: document.getElementById('progressBar')
     };
 
-    function getManagerResponse(question) {
-      const q = question.toLowerCase();
-      let category = 'motivatie'; // default
-      
-      if (q.includes('structuur') || q.includes('planning') || q.includes('organiseren')) {
-        category = 'structuur';
-      } else if (q.includes('feedback') || q.includes('manager') || q.includes('baas')) {
-        category = 'feedback';
-      } else if (q.includes('collega') || q.includes('team') || q.includes('samenwerk')) {
-        category = 'samenwerking';
-      } else if (q.includes('leren') || q.includes('ontwikkel') || q.includes('groei')) {
-        category = 'ontwikkeling';
-      } else if (q.includes('werkdruk') || q.includes('rustig') || q.includes('weinig werk')) {
-        category = 'werkdruk';
+    // Load saved data
+    let ambitions = JSON.parse(localStorage.getItem('motivationAmbitions') || '[]');
+    let apiKey = localStorage.getItem('geminiApiKey') || '';
+
+    // Check if API key is set
+    function checkApiKeyStatus() {
+      if (apiKey) {
+        elements.apiKeySetup.style.display = 'none';
+        elements.chatButton.disabled = false;
+      } else {
+        elements.apiKeySetup.style.display = 'block';
+        elements.chatButton.disabled = true;
+        elements.chatButton.textContent = '🔐 Voer eerst API key in';
       }
-      
-      const responses = managerResponses[category];
-      return responses[Math.floor(Math.random() * responses.length)];
     }
 
+    // Save API key
+    function saveApiKeyFunc() {
+      const key = elements.apiKeyInput.value.trim();
+      if (key.startsWith('AIza') && key.length > 30) {
+        apiKey = key;
+        localStorage.setItem('geminiApiKey', apiKey);
+        elements.apiKeyInput.value = '';
+        checkApiKeyStatus();
+        alert('✅ API key opgeslagen! Je kunt nu de AI gebruiken.');
+      } else {
+        alert('❌ Dit lijkt geen geldige Gemini API key. Controleer of het begint met "AIza"');
+      }
+    }
+
+    // Call Gemini API
+    async function callGeminiAPI(prompt) {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: prompt
+              }]
+            }]
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text;
+      } catch (error) {
+        console.error('Gemini API Error:', error);
+        return 'Sorry, er ging iets mis met de AI verbinding. Probeer het later opnieuw.';
+      }
+    }
+
+    // Create context-aware prompt
+    function createPrompt(userQuestion) {
+      const completedAmbitions = ambitions.filter(a => a.completed);
+      const activeAmbitions = ambitions.filter(a => !a.completed);
+      
+      let context = "Je bent een ervaren werk-motivatie coach. ";
+      
+      if (ambitions.length > 0) {
+        context += `De gebruiker heeft de volgende ambities:\n`;
+        if (activeAmbitions.length > 0) {
+          context += `Actieve ambities: ${activeAmbitions.map(a => `"${a.text}" (${a.category})`).join(', ')}\n`;
+        }
+        if (completedAmbitions.length > 0) {
+          context += `Voltooide ambities: ${completedAmbitions.map(a => `"${a.text}"`).join(', ')}\n`;
+        }
+      }
+      
+      context += `\nDe gebruiker werkt in een baan met lage werkdruk en weinig begeleiding, wat motivatieproblemen kan geven.\n\n`;
+      context += `Gebruiker vraagt: "${userQuestion}"\n\n`;
+      context += `Geef praktisch, persoonlijk advies in het Nederlands. Houd het concreet en actionable. Gebruik een vriendelijke, professionele toon. Maximum 150 woorden.`;
+      
+      return context;
+    }
+
+    // Update progress
     function updateProgress() {
       const completed = ambitions.filter(a => a.completed).length;
       const total = ambitions.length;
       const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
       
-      progressText.textContent = `${completed} van ${total} voltooid`;
-      progressBar.style.width = `${percentage}%`;
+      elements.progressText.textContent = `${completed} van ${total} voltooid`;
+      elements.progressBar.style.width = `${percentage}%`;
     }
 
+    // Save ambitions
     function saveAmbitions() {
       localStorage.setItem('motivationAmbitions', JSON.stringify(ambitions));
     }
 
+    // Render ambitions
     function renderAmbitions() {
-      ambitionsList.innerHTML = '';
+      elements.ambitionsList.innerHTML = '';
       if (ambitions.length === 0) {
-        ambitionsList.innerHTML = '<p class="text-gray-500">Nog geen ambities toegevoegd.</p>';
+        elements.ambitionsList.innerHTML = '<p class="text-gray-500">Nog geen ambities toegevoegd.</p>';
         updateProgress();
         return;
       }
@@ -187,33 +254,36 @@
           <button class="text-green-600 hover:text-green-800" onclick="toggleAmbition(${i})" title="${amb.completed ? 'Ongedaan maken' : 'Voltooien'}">${amb.completed ? '↩️' : '✔️'}</button>
           <button class="text-red-600 hover:text-red-800" onclick="deleteAmbition(${i})" title="Verwijderen">🗑️</button>
         `;
-        ambitionsList.appendChild(li);
+        elements.ambitionsList.appendChild(li);
       });
       updateProgress();
     }
 
+    // Add ambition
     function addAmbition() {
-      const text = newAmbitionText.value.trim();
-      const category = selectedCategory.value;
+      const text = elements.newAmbitionText.value.trim();
+      const category = elements.selectedCategory.value;
       if (!text || !category) {
-        ambitionError.classList.remove('hidden');
-        setTimeout(() => ambitionError.classList.add('hidden'), 3000);
+        elements.ambitionError.classList.remove('hidden');
+        setTimeout(() => elements.ambitionError.classList.add('hidden'), 3000);
         return;
       }
-      ambitionError.classList.add('hidden');
+      elements.ambitionError.classList.add('hidden');
       ambitions.push({ text, category, completed: false });
-      newAmbitionText.value = '';
-      selectedCategory.value = '';
+      elements.newAmbitionText.value = '';
+      elements.selectedCategory.value = '';
       saveAmbitions();
       renderAmbitions();
     }
 
+    // Toggle ambition
     function toggleAmbition(index) {
       ambitions[index].completed = !ambitions[index].completed;
       saveAmbitions();
       renderAmbitions();
     }
 
+    // Delete ambition
     function deleteAmbition(index) {
       if (confirm('Weet je zeker dat je deze ambitie wilt verwijderen?')) {
         ambitions.splice(index, 1);
@@ -222,35 +292,46 @@
       }
     }
 
-    function askVirtualManager() {
-      const question = chatInput.value.trim();
-      if (!question) return;
+    // Ask AI
+    async function askAI() {
+      const question = elements.chatInput.value.trim();
+      if (!question || !apiKey) return;
       
-      chatButton.disabled = true;
-      chatButton.textContent = '🤔 Aan het denken...';
+      elements.chatButton.disabled = true;
+      elements.chatButton.innerHTML = '<span class="typing">🤖 AI denkt na...</span>';
+      elements.chatResponseContainer.classList.remove('hidden');
+      elements.chatResponseText.innerHTML = '<div class="typing">Bezig met analyseren van je situatie...</div>';
       
-      setTimeout(() => {
-        const response = getManagerResponse(question);
-        chatResponseText.textContent = response;
-        chatResponseContainer.classList.remove('hidden');
-        
-        chatButton.disabled = false;
-        chatButton.textContent = '🤖 Vraag je Virtuele Manager';
-      }, 1000);
+      const prompt = createPrompt(question);
+      const response = await callGeminiAPI(prompt);
+      
+      elements.chatResponseText.textContent = response;
+      elements.chatButton.disabled = false;
+      elements.chatButton.textContent = '🤖 Vraag je AI Coach';
     }
 
     // Event listeners
-    addAmbitionButton.addEventListener('click', addAmbition);
-    newAmbitionText.addEventListener('keypress', (e) => {
+    elements.saveApiKey.addEventListener('click', saveApiKeyFunc);
+    elements.apiKeyInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') saveApiKeyFunc();
+    });
+    
+    elements.addAmbitionButton.addEventListener('click', addAmbition);
+    elements.newAmbitionText.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') addAmbition();
     });
     
-    chatButton.addEventListener('click', askVirtualManager);
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && e.ctrlKey) askVirtualManager();
+    elements.chatButton.addEventListener('click', askAI);
+    elements.chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) askAI();
     });
 
+    // Make functions global for onclick handlers
+    window.toggleAmbition = toggleAmbition;
+    window.deleteAmbition = deleteAmbition;
+
     // Initialize
+    checkApiKeyStatus();
     renderAmbitions();
   </script>
 </body>

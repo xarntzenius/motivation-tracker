@@ -26,6 +26,13 @@
       from { opacity: 0; transform: scale(0.95); }
       to { opacity: 1; transform: scale(1); }
     }
+    .manager-response {
+      background: rgba(34, 197, 94, 0.1);
+      border-left: 4px solid #22c55e;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
   </style>
 </head>
 <body class="min-h-screen p-6 flex items-start justify-center">
@@ -34,8 +41,7 @@
 
     <!-- Linker Paneel -->
     <div class="glass p-6 lg:p-8 fade-in">
-      <h1 class="text-3xl font-bold mb-6 text-indigo-700">📊 Mijn Motivatie Booster
-      </h1>
+      <h1 class="text-3xl font-bold mb-6 text-indigo-700">📊 Mijn Motivatie Booster</h1>
 
       <h2 class="text-xl font-semibold mb-2">🌟 Ambitie Toevoegen</h2>
       <input id="newAmbitionText" class="w-full p-3 rounded-lg border mb-2" placeholder="Wat wil je bereiken? 🚀" />
@@ -52,17 +58,25 @@
       <p id="ambitionError" class="text-red-500 text-sm hidden">Vul zowel ambitie als categorie in.</p>
 
       <h2 class="text-xl font-semibold mt-6 mb-2">🧠 Virtuele Manager</h2>
-      <textarea id="chatInput" class="w-full p-3 rounded-lg border mb-2" placeholder="Waar loop je tegenaan? 🤔"></textarea>
+      <textarea id="chatInput" class="w-full p-3 rounded-lg border mb-2" placeholder="Waar loop je tegenaan? 🤔" rows="3"></textarea>
       <button id="chatButton" class="w-full py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 transition">🤖 Vraag je Virtuele Manager</button>
       <div id="chatResponseContainer" class="mt-4 hidden">
         <h3 class="text-lg font-semibold mb-1">🗣️ Antwoord:</h3>
-        <p id="chatResponseText" class="text-gray-800"></p>
+        <div id="chatResponseText" class="manager-response"></div>
       </div>
     </div>
 
     <!-- Rechter Paneel: Doelenlijst -->
     <div class="glass p-6 lg:p-8 fade-in">
       <h2 class="text-2xl font-bold mb-4">📅 Mijn Ambities</h2>
+      <div class="mb-4">
+        <div class="text-sm text-gray-600">
+          Voortgang: <span id="progressText">0 van 0 voltooid</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+          <div id="progressBar" class="bg-green-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
       <ul id="ambitionsList" class="space-y-3">
         <!-- Ambities worden hier geladen -->
       </ul>
@@ -76,29 +90,106 @@
     const addAmbitionButton = document.getElementById('addAmbitionButton');
     const ambitionError = document.getElementById('ambitionError');
     const ambitionsList = document.getElementById('ambitionsList');
+    const chatInput = document.getElementById('chatInput');
+    const chatButton = document.getElementById('chatButton');
+    const chatResponseContainer = document.getElementById('chatResponseContainer');
+    const chatResponseText = document.getElementById('chatResponseText');
+    const progressText = document.getElementById('progressText');
+    const progressBar = document.getElementById('progressBar');
 
-    let ambitions = [];
+    // Load saved ambitions from localStorage
+    let ambitions = JSON.parse(localStorage.getItem('motivationAmbitions') || '[]');
+
+    // Virtuele manager responses
+    const managerResponses = {
+      'structuur': [
+        'Probeer je dag op te delen in blokken van 2 uur. Begin met het belangrijkste werk als je energie het hoogst is.',
+        'Maak elke ochtend een lijst van 3 concrete dingen die je die dag wilt afkrijgen. Meer niet!',
+        'Zet een timer voor 25 minuten en werk gefocust aan één taak (Pomodoro techniek).'
+      ],
+      'motivatie': [
+        'Bedenk waarom dit werk belangrijk is voor je lange termijn doelen. Schrijf dat op.',
+        'Beloon jezelf na het voltooien van taken, ook de kleine. Een kop goede koffie kan al genoeg zijn.',
+        'Vertel een collega wat je van plan bent te doen vandaag. Sociale verantwoording helpt enorm.'
+      ],
+      'feedback': [
+        'Vraag je manager om een wekelijks 15-minuten gesprekje. Gewoon: "Hoe doe ik het?"',
+        'Stuur elke vrijdag een kort mailtje met wat je hebt bereikt die week.',
+        'Zoek een collega die ook wil groeien en word elkaars accountability partner.'
+      ],
+      'samenwerking': [
+        'Neem initiatief voor een informeel kennisdelings-moment met je team.',
+        'Bied hulp aan bij projecten waar je iets van kunt leren.',
+        'Stel voor om samen te lunchen met collega\'s - relaties zijn belangrijk.'
+      ],
+      'ontwikkeling': [
+        'Gebruik rustige momenten voor online cursussen of certificaten.',
+        'Vraag of je mee kunt kijken bij interessante projecten van anderen.',
+        'Start een klein eigen project dat waarde toevoegt aan het team.'
+      ],
+      'werkdruk': [
+        'Lage werkdruk is ook een kans - wat kun je leren of verbeteren in deze tijd?',
+        'Maak eigen deadlines en houd je eraan. Behandel ze als echte deadlines.',
+        'Zoek naar processen die verbeterd kunnen worden en stel verbeteringen voor.'
+      ]
+    };
+
+    function getManagerResponse(question) {
+      const q = question.toLowerCase();
+      let category = 'motivatie'; // default
+      
+      if (q.includes('structuur') || q.includes('planning') || q.includes('organiseren')) {
+        category = 'structuur';
+      } else if (q.includes('feedback') || q.includes('manager') || q.includes('baas')) {
+        category = 'feedback';
+      } else if (q.includes('collega') || q.includes('team') || q.includes('samenwerk')) {
+        category = 'samenwerking';
+      } else if (q.includes('leren') || q.includes('ontwikkel') || q.includes('groei')) {
+        category = 'ontwikkeling';
+      } else if (q.includes('werkdruk') || q.includes('rustig') || q.includes('weinig werk')) {
+        category = 'werkdruk';
+      }
+      
+      const responses = managerResponses[category];
+      return responses[Math.floor(Math.random() * responses.length)];
+    }
+
+    function updateProgress() {
+      const completed = ambitions.filter(a => a.completed).length;
+      const total = ambitions.length;
+      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      
+      progressText.textContent = `${completed} van ${total} voltooid`;
+      progressBar.style.width = `${percentage}%`;
+    }
+
+    function saveAmbitions() {
+      localStorage.setItem('motivationAmbitions', JSON.stringify(ambitions));
+    }
 
     function renderAmbitions() {
       ambitionsList.innerHTML = '';
       if (ambitions.length === 0) {
         ambitionsList.innerHTML = '<p class="text-gray-500">Nog geen ambities toegevoegd.</p>';
+        updateProgress();
         return;
       }
+      
       ambitions.forEach((amb, i) => {
         const li = document.createElement('li');
         li.className = 'bg-white/60 backdrop-blur rounded-xl p-4 shadow-sm flex items-start gap-4 fade-in';
         li.innerHTML = `
-          <span class="text-2xl">\${amb.completed ? '✅' : '📌'}</span>
+          <span class="text-2xl">${amb.completed ? '✅' : '📌'}</span>
           <div class="flex-1">
-            <p class="text-lg font-semibold">\${amb.text}</p>
-            <p class="text-sm text-gray-600 mt-1">Categorie: \${amb.category}</p>
+            <p class="text-lg font-semibold ${amb.completed ? 'line-through text-gray-500' : ''}">${amb.text}</p>
+            <p class="text-sm text-gray-600 mt-1">Categorie: ${amb.category}</p>
           </div>
-          <button class="text-green-600 hover:text-green-800" onclick="toggleAmbition(${i})">\${amb.completed ? '↩️' : '✔️'}</button>
-          <button class="text-red-600 hover:text-red-800" onclick="deleteAmbition(${i})">🗑️</button>
+          <button class="text-green-600 hover:text-green-800" onclick="toggleAmbition(${i})" title="${amb.completed ? 'Ongedaan maken' : 'Voltooien'}">${amb.completed ? '↩️' : '✔️'}</button>
+          <button class="text-red-600 hover:text-red-800" onclick="deleteAmbition(${i})" title="Verwijderen">🗑️</button>
         `;
         ambitionsList.appendChild(li);
       });
+      updateProgress();
     }
 
     function addAmbition() {
@@ -106,29 +197,61 @@
       const category = selectedCategory.value;
       if (!text || !category) {
         ambitionError.classList.remove('hidden');
+        setTimeout(() => ambitionError.classList.add('hidden'), 3000);
         return;
       }
       ambitionError.classList.add('hidden');
       ambitions.push({ text, category, completed: false });
       newAmbitionText.value = '';
       selectedCategory.value = '';
+      saveAmbitions();
       renderAmbitions();
     }
 
     function toggleAmbition(index) {
       ambitions[index].completed = !ambitions[index].completed;
+      saveAmbitions();
       renderAmbitions();
     }
 
     function deleteAmbition(index) {
-      ambitions.splice(index, 1);
-      renderAmbitions();
+      if (confirm('Weet je zeker dat je deze ambitie wilt verwijderen?')) {
+        ambitions.splice(index, 1);
+        saveAmbitions();
+        renderAmbitions();
+      }
     }
 
+    function askVirtualManager() {
+      const question = chatInput.value.trim();
+      if (!question) return;
+      
+      chatButton.disabled = true;
+      chatButton.textContent = '🤔 Aan het denken...';
+      
+      setTimeout(() => {
+        const response = getManagerResponse(question);
+        chatResponseText.textContent = response;
+        chatResponseContainer.classList.remove('hidden');
+        
+        chatButton.disabled = false;
+        chatButton.textContent = '🤖 Vraag je Virtuele Manager';
+      }, 1000);
+    }
+
+    // Event listeners
     addAmbitionButton.addEventListener('click', addAmbition);
     newAmbitionText.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') addAmbition();
     });
+    
+    chatButton.addEventListener('click', askVirtualManager);
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) askVirtualManager();
+    });
+
+    // Initialize
+    renderAmbitions();
   </script>
 </body>
 </html>
